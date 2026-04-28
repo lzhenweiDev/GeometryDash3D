@@ -26,6 +26,19 @@
             backdrop-filter: blur(10px);
         }
 
+        #fps-display {
+            position: absolute; bottom: 25px; right: 25px;
+            z-index: 20; pointer-events: none;
+            background: rgba(0, 10, 20, 0.9); padding: 10px 20px;
+            border: 2px solid #ff007f; border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5), inset 0 0 10px rgba(255, 0, 127, 0.3);
+            backdrop-filter: blur(10px);
+            font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: #ff007f;
+            text-shadow: 0 0 10px #ff007f; letter-spacing: 2px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        #fps-value { font-size: 2rem; font-weight: 900; color: #fff; text-shadow: 0 0 15px #fff; }
+
         .stat-group { text-align: center; display: flex; flex-direction: column; }
         .stat-label { font-size: 1rem; color: #00f3ff; text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-bottom: 2px; }
         .stat-value { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: #fff; text-shadow: 0 0 15px #fff; font-weight: 900; }
@@ -79,6 +92,10 @@
             <div class="stat-label">VELOCITY</div>
             <div class="stat-value speed-val" id="speed-val">1.0X</div>
         </div>
+    </div>
+
+    <div id="fps-display">
+        FPS <span id="fps-value">60</span>
     </div>
 
     <div id="start-screen" class="menu-screen">
@@ -179,6 +196,10 @@
         
         let bikeCockpitGroup, throttleGrip;
         let throttleTargetRot = 0;
+
+        // FPS tracking
+        let frameCount = 0, lastFpsTime = performance.now(), currentFPS = 60;
+        const fpsUpdateInterval = 200; // Update FPS display every 200ms
 
         // =========================================================================
         // 3. TEXTUREN & MATERIALIEN
@@ -485,12 +506,25 @@
             setTimeout(() => throttleTargetRot = 0, 600); 
         }
 
+        function updateFPS() {
+            const now = performance.now();
+            frameCount++;
+            if (now - lastFpsTime >= fpsUpdateInterval) {
+                currentFPS = Math.round((frameCount / (now - lastFpsTime)) * 1000);
+                document.getElementById('fps-value').innerText = currentFPS;
+                frameCount = 0;
+                lastFpsTime = now;
+            }
+        }
+
         // =========================================================================
         // 10. GAME LOOP & KOLLISION
         // =========================================================================
         function animate() {
             requestAnimationFrame(animate);
             let dt = Math.min(clock.getDelta(), 0.05);
+
+            updateFPS();
 
             if(isPlaying) {
                 currentSpeed += 0.8 * dt; 
@@ -563,6 +597,7 @@
             targetLane = 0; score = 0; distance = 0; 
             currentSpeed = startSpeed; lastSpeedMilestone = 1.0;
             throttleTargetRot = 0;
+            frameCount = 0; lastFpsTime = performance.now(); currentFPS = 60;
             clock.start(); isPlaying = true; isGameOver = false;
         };
 
