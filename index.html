@@ -105,7 +105,7 @@
             <b>MOTORRAD STEUERUNG:</b><br><br>
             <span>[ A ]</span> / <span>[ D ]</span> : Tief in die Kurve legen<br>
             <span>[ W ]</span> : Motorrad-Sprung (Grüne Pfeile)<br>
-            <span>[ S ]</span> : Power-Slide (Rote Laser)<br>
+            <span>[ S ]</span> : Power-Slide (Rote Laser) – Gedrückt halten!<br>
         </div>
         <button class="btn" id="btn-start" onclick="startSystem()">START ENGINE</button>
     </div>
@@ -200,6 +200,9 @@
         // FPS tracking
         let frameCount = 0, lastFpsTime = performance.now(), currentFPS = 60;
         const fpsUpdateInterval = 200; // Update FPS display every 200ms
+
+        // Input state
+        let isSlideKeyHeld = false; // NEU: Trackt, ob S gedrückt gehalten wird
 
         // =========================================================================
         // 3. TEXTUREN & MATERIALIEN
@@ -311,11 +314,22 @@
                     bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, -0.2, 10 * dt);
                     if(camera.position.y <= this.yBase) { camera.position.y = this.yBase; this.isJumping = false; this.yVelocity = 0; bikeCockpitGroup.position.y = -0.5; }
                 } else if (this.isDucking) {
-                    camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yDuck, 20 * dt); this.duckTimer -= dt;
-                    bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, 0.8, 10 * dt);
-                    bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, 0.4, 10 * dt);
-                    if(Math.random() > 0.3) spawnSparks(camera.position.x + (Math.random()-0.5)*2, 0.1, camera.position.z - 2);
-                    if(this.duckTimer <= 0) this.isDucking = false;
+                    // Slide Logik: Nur ducken, wenn Taste gehalten wird
+                    if (!isSlideKeyHeld) {
+                        // Taste wurde losgelassen, sofort aufrichten
+                        this.isDucking = false;
+                        this.duckTimer = 0;
+                    } else {
+                        camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yDuck, 20 * dt); 
+                        this.duckTimer -= dt;
+                        bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, 0.8, 10 * dt);
+                        bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, 0.4, 10 * dt);
+                        if(Math.random() > 0.3) spawnSparks(camera.position.x + (Math.random()-0.5)*2, 0.1, camera.position.z - 2);
+                        if(this.duckTimer <= 0) {
+                            this.isDucking = false;
+                            this.duckTimer = 0;
+                        }
+                    }
                 } else {
                     camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yBase, 15 * dt);
                     bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, 0, 10 * dt);
@@ -324,7 +338,15 @@
             },
             
             jump() { if(!this.isJumping && !this.isDucking) { this.isJumping = true; this.yVelocity = this.jumpForce; AudioSys.jump(); } },
-            duck() { if(!this.isJumping) { this.isDucking = true; this.duckTimer = 0.8; AudioSys.slide(); } else { this.yVelocity = -60; } },
+            duck() { 
+                if(!this.isJumping) { 
+                    this.isDucking = true; 
+                    this.duckTimer = 0.1; // Kurzer Timer, wird aber durch Halten immer wieder erneuert
+                    AudioSys.slide(); 
+                } else { 
+                    this.yVelocity = -60; 
+                } 
+            },
             moveLeft() { targetLane = Math.max(-1, targetLane - 1); }, 
             moveRight() { targetLane = Math.min(1, targetLane + 1); },
 
@@ -335,7 +357,7 @@
         };
 
         // =========================================================================
-        // 6. INPUT STEUERUNG
+        // 6. INPUT STEUERUNG (MIT HOLD-FUNKTION)
         // =========================================================================
         window.addEventListener('keydown', (e) => {
             if(!isPlaying || e.repeat) return; 
@@ -343,7 +365,18 @@
             if(key === 'KeyA' || key === 'ArrowLeft') Player.moveLeft();
             if(key === 'KeyD' || key === 'ArrowRight') Player.moveRight();
             if(key === 'KeyW' || key === 'ArrowUp' || key === 'Space') Player.jump();
-            if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') Player.duck();
+            if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') {
+                isSlideKeyHeld = true; // Taste gehalten
+                Player.duck();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if(!isPlaying) return;
+            let key = e.code;
+            if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') {
+                isSlideKeyHeld = false; // Taste losgelassen
+            }
         });
 
         window.addEventListener('mousedown', (e) => {
@@ -597,6 +630,7 @@
             targetLane = 0; score = 0; distance = 0; 
             currentSpeed = startSpeed; lastSpeedMilestone = 1.0;
             throttleTargetRot = 0;
+            isSlideKeyHeld = false; // Zurücksetzen
             frameCount = 0; lastFpsTime = performance.now(); currentFPS = 60;
             clock.start(); isPlaying = true; isGameOver = false;
         };
