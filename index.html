@@ -212,13 +212,12 @@
         let isSlideKeyHeld = false;
 
         // =========================================================================
-        // 3. TEXTUREN & MATERIALIEN (VERBESSERT)
+        // 3. TEXTUREN & MATERIALIEN
         // =========================================================================
         function createGridTex() {
             let cvs = document.createElement('canvas'); cvs.width = 512; cvs.height = 512; let ctx = cvs.getContext('2d');
             ctx.fillStyle = '#010205'; ctx.fillRect(0, 0, 512, 512);
             ctx.strokeStyle = '#00f3ff'; ctx.lineWidth = 4; ctx.strokeRect(0, 0, 512, 512);
-            // Zusätzliche Grid-Details
             ctx.strokeStyle = '#003344'; ctx.lineWidth = 1;
             for(let i = 0; i < 512; i += 64) {
                 ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
@@ -230,7 +229,6 @@
         function createBuildingTex(color) {
             let cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 512; let ctx = cvs.getContext('2d');
             ctx.fillStyle = color; ctx.fillRect(0, 0, 256, 512);
-            // Fenster
             for(let y = 0; y < 512; y += 32) {
                 for(let x = 0; x < 256; x += 48) {
                     if(Math.random() > 0.3) {
@@ -261,12 +259,11 @@
         const matArrowR = new THREE.MeshStandardMaterial({ color: 0xff0033, emissive: 0xaa0000 }); 
 
         // =========================================================================
-        // 4. MOTORRAD COCKPIT & HÄNDE (VERBESSERT)
+        // 4. MOTORRAD COCKPIT & HÄNDE
         // =========================================================================
         function buildBikeCockpit() {
             bikeCockpitGroup = new THREE.Group();
             
-            // Windschutzscheibe - jetzt mit Glas-Effekt
             let shieldGeo = new THREE.CylinderGeometry(0.8, 1.5, 1.8, 16, 1, true, 0, Math.PI);
             let shieldMat = new THREE.MeshPhysicalMaterial({
                 color: 0x00f3ff, transparent: true, opacity: 0.3,
@@ -276,37 +273,30 @@
             shield.rotation.x = Math.PI / 4; shield.position.set(0, -0.4, -2.8); 
             bikeCockpitGroup.add(shield);
             
-            // Rand der Windschutzscheibe
             let shieldEdge = new THREE.Mesh(shieldGeo, new THREE.MeshBasicMaterial({color: 0x00f3ff, wireframe: true, transparent: true, opacity: 0.5}));
             shieldEdge.rotation.x = Math.PI / 4; shieldEdge.position.set(0, -0.4, -2.8);
             bikeCockpitGroup.add(shieldEdge);
 
-            // Armaturenbrett mit Hologramm
             let dash = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 1.8), new THREE.MeshStandardMaterial({color: 0x111111, emissive: 0x002244, roughness: 0.5, metalness: 0.8}));
             dash.rotation.x = -Math.PI / 8; dash.position.set(0, -1.2, -1.8); bikeCockpitGroup.add(dash);
             
-            // Hologramm-Projektion
             let holoGeo = new THREE.PlaneGeometry(0.8, 0.4);
             let holoMat = new THREE.MeshBasicMaterial({color: 0x00f3ff, transparent: true, opacity: 0.6, side: THREE.DoubleSide});
             let hologram = new THREE.Mesh(holoGeo, holoMat);
             hologram.position.set(0, -0.8, -1.2); hologram.rotation.x = -Math.PI / 6;
             bikeCockpitGroup.add(hologram);
             
-            // Lenkerstange - verchromt
             let bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.5, 16), new THREE.MeshStandardMaterial({color: 0x888888, roughness: 0.2, metalness: 1.0}));
             bar.rotation.z = Math.PI / 2; bar.position.set(0, -0.8, -2.0); bikeCockpitGroup.add(bar);
             
-            // --- DIE HÄNDE UND GRIFFE ---
             let gripGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.8, 16); 
             let gripMat = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.3, metalness: 0.9});
             
-            // Handschuhe und Arme
             let gloveGeo = new THREE.BoxGeometry(0.28, 0.35, 0.35);
             let gloveMat = new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.4, metalness: 0.6});
             let armGeo = new THREE.CylinderGeometry(0.14, 0.2, 1.8, 8);
             let armMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.3, metalness: 0.7});
 
-            // LINKS (Fest)
             let lGrip = new THREE.Mesh(gripGeo, gripMat); 
             lGrip.rotation.z = Math.PI / 2; lGrip.position.set(-1.8, -0.8, -2.0);
             
@@ -318,7 +308,6 @@
             
             bikeCockpitGroup.add(lGrip, lGlove, lArm);
 
-            // RECHTS (Gasgriff - Dreht sich!)
             throttleGrip = new THREE.Mesh(gripGeo, gripMat); 
             throttleGrip.rotation.z = Math.PI / 2; 
             throttleGrip.position.set(1.8, -0.8, -2.0);
@@ -338,11 +327,11 @@
         }
 
         // =========================================================================
-        // 5. SPIELER LOGIK
+        // 5. SPIELER LOGIK (SLIDE NUR BEI GEHALTENER TASTE)
         // =========================================================================
         const Player = {
             yBase: 2.8, yDuck: 1.0, yVelocity: 0, gravity: -90, jumpForce: 32,
-            isJumping: false, isDucking: false, duckTimer: 0,
+            isJumping: false, isDucking: false,
             
             update(dt) {
                 let diff = targetLane * LANE_W - camera.position.x;
@@ -356,72 +345,112 @@
                 throttleGrip.rotation.x = THREE.MathUtils.lerp(throttleGrip.rotation.x, throttleTargetRot, 6 * dt);
 
                 if(this.isJumping) {
-                    this.yVelocity += this.gravity * dt; camera.position.y += this.yVelocity * dt;
+                    this.yVelocity += this.gravity * dt; 
+                    camera.position.y += this.yVelocity * dt;
                     bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, -0.3, 10 * dt);
                     bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, -0.2, 10 * dt);
-                    if(camera.position.y <= this.yBase) { camera.position.y = this.yBase; this.isJumping = false; this.yVelocity = 0; bikeCockpitGroup.position.y = -0.5; }
+                    if(camera.position.y <= this.yBase) { 
+                        camera.position.y = this.yBase; 
+                        this.isJumping = false; 
+                        this.yVelocity = 0; 
+                        bikeCockpitGroup.position.y = -0.5; 
+                    }
                 } else if (this.isDucking) {
+                    // WICHTIG: Nur sliden wenn Taste gehalten wird
                     if (!isSlideKeyHeld) {
+                        // Taste wurde losgelassen -> sofort aufrichten
                         this.isDucking = false;
-                        this.duckTimer = 0;
                     } else {
-                        camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yDuck, 20 * dt); 
-                        this.duckTimer -= dt;
+                        // Taste wird noch gehalten -> weiter sliden
+                        camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yDuck, 20 * dt);
                         bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, 0.8, 10 * dt);
                         bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, 0.4, 10 * dt);
                         if(Math.random() > 0.3) spawnSparks(camera.position.x + (Math.random()-0.5)*2, 0.1, camera.position.z - 2);
-                        if(this.duckTimer <= 0) {
-                            this.isDucking = false;
-                            this.duckTimer = 0;
-                        }
                     }
                 } else {
+                    // Normalzustand
                     camera.position.y = THREE.MathUtils.lerp(camera.position.y, this.yBase, 15 * dt);
                     bikeCockpitGroup.position.y = THREE.MathUtils.lerp(bikeCockpitGroup.position.y, 0, 10 * dt);
                     bikeCockpitGroup.rotation.x = THREE.MathUtils.lerp(bikeCockpitGroup.rotation.x, 0, 10 * dt);
                 }
             },
             
-            jump() { if(!this.isJumping && !this.isDucking) { this.isJumping = true; this.yVelocity = this.jumpForce; AudioSys.jump(); } },
-            duck() { 
-                if(!this.isJumping) { 
+            jump() { 
+                if(!this.isJumping && !this.isDucking) { 
+                    this.isJumping = true; 
+                    this.yVelocity = this.jumpForce; 
+                    AudioSys.jump(); 
+                } 
+            },
+            
+            startDucking() { 
+                if(!this.isJumping && !this.isDucking) { 
                     this.isDucking = true; 
-                    this.duckTimer = 0.1;
                     AudioSys.slide(); 
-                } else { 
+                } else if(this.isJumping) { 
+                    // Schneller fallen wenn im Sprung
                     this.yVelocity = -60; 
                 } 
             },
+            
+            stopDucking() {
+                // Wird von keyup aufgerufen
+                if(this.isDucking) {
+                    this.isDucking = false;
+                }
+            },
+            
             moveLeft() { targetLane = Math.max(-1, targetLane - 1); }, 
             moveRight() { targetLane = Math.min(1, targetLane + 1); },
 
             getBox() {
-                let sizeY = this.isDucking ? 1.2 : 2.2; let posY = this.isDucking ? 0.6 : (camera.position.y - 1.1);
-                return new THREE.Box3(new THREE.Vector3(camera.position.x - 0.8, posY - sizeY/2, camera.position.z - 0.8), new THREE.Vector3(camera.position.x + 0.8, posY + sizeY/2, camera.position.z + 0.8));
+                let sizeY = this.isDucking ? 1.2 : 2.2; 
+                let posY = this.isDucking ? 0.6 : (camera.position.y - 1.1);
+                return new THREE.Box3(
+                    new THREE.Vector3(camera.position.x - 0.8, posY - sizeY/2, camera.position.z - 0.8), 
+                    new THREE.Vector3(camera.position.x + 0.8, posY + sizeY/2, camera.position.z + 0.8)
+                );
             }
         };
 
         // =========================================================================
-        // 6. INPUT STEUERUNG
+        // 6. INPUT STEUERUNG (KLAR GETRENNT: KEYDOWN STARTET, KEYUP BEENDET)
         // =========================================================================
         window.addEventListener('keydown', (e) => {
             if(!isPlaying || e.repeat) return; 
             let key = e.code;
-            if(key === 'KeyA' || key === 'ArrowLeft') Player.moveLeft();
-            if(key === 'KeyD' || key === 'ArrowRight') Player.moveRight();
-            if(key === 'KeyW' || key === 'ArrowUp' || key === 'Space') Player.jump();
-            if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') {
+            
+            if(key === 'KeyA' || key === 'ArrowLeft') {
+                Player.moveLeft();
+            }
+            else if(key === 'KeyD' || key === 'ArrowRight') {
+                Player.moveRight();
+            }
+            else if(key === 'KeyW' || key === 'ArrowUp' || key === 'Space') {
+                e.preventDefault();
+                Player.jump();
+            }
+            else if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') {
+                e.preventDefault();
                 isSlideKeyHeld = true;
-                Player.duck();
+                Player.startDucking();
             }
         });
 
         window.addEventListener('keyup', (e) => {
             if(!isPlaying) return;
             let key = e.code;
+            
             if(key === 'KeyS' || key === 'ArrowDown' || key === 'ShiftLeft') {
                 isSlideKeyHeld = false;
+                Player.stopDucking();
             }
+        });
+
+        // Für den Fall dass das Fenster den Fokus verliert
+        window.addEventListener('blur', () => {
+            isSlideKeyHeld = false;
+            if(Player.isDucking) Player.stopDucking();
         });
 
         window.addEventListener('mousedown', (e) => {
@@ -432,7 +461,7 @@
         });
 
         // =========================================================================
-        // 7. 3D ENGINE & HINTERGRUND (DEUTLICH VERBESSERT)
+        // 7. 3D ENGINE & HINTERGRUND
         // =========================================================================
         function createRainSystem() {
             const rainGeo = new THREE.BufferGeometry();
@@ -472,7 +501,6 @@
             renderer.toneMappingExposure = 1.2;
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Verbesserte Beleuchtung
             scene.add(new THREE.AmbientLight(0x222244, 0.8));
             
             let dirLight = new THREE.DirectionalLight(0x00f3ff, 1.5); 
@@ -488,7 +516,6 @@
             dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
             
-            // Neon Punktlichter
             const pointLight1 = new THREE.PointLight(0xff007f, 2, 100);
             pointLight1.position.set(0, 30, -200);
             scene.add(pointLight1);
@@ -497,33 +524,28 @@
             pointLight2.position.set(0, 30, -400);
             scene.add(pointLight2);
 
-            // Sonne mit Glow
             let sunGeo = new THREE.SphereGeometry(30, 32, 32); 
             let sunMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
             let sun = new THREE.Mesh(sunGeo, sunMat); 
             sun.position.set(0, 120, -800); 
             scene.add(sun);
             
-            // Sonnen-Glow
             let glowGeo = new THREE.SphereGeometry(45, 32, 32);
             let glowMat = new THREE.MeshBasicMaterial({ color: 0xff007f, transparent: true, opacity: 0.3 });
             let glow = new THREE.Mesh(glowGeo, glowMat);
             glow.position.copy(sun.position);
             scene.add(glow);
 
-            // Horizontlinie mit Neon
             let horGeo = new THREE.PlaneGeometry(3000, 4);
             let horMat = new THREE.MeshBasicMaterial({color: 0x00f3ff, transparent: true, opacity: 0.8});
             let hor = new THREE.Mesh(horGeo, horMat);
             hor.position.set(0, 0, -799); 
             scene.add(hor);
             
-            // Zweite Horizontlinie (Magenta)
             let hor2 = new THREE.Mesh(new THREE.PlaneGeometry(3000, 2), new THREE.MeshBasicMaterial({color: 0xff007f, transparent: true, opacity: 0.5}));
             hor2.position.set(0, -2, -798);
             scene.add(hor2);
 
-            // Sterne
             let starGeo = new THREE.BufferGeometry(); let starPos = [];
             for(let i=0; i<2000; i++) {
                 starPos.push((Math.random()-0.5)*1500, Math.random()*500 + 50, -Math.random()*800 - 100);
@@ -532,13 +554,11 @@
             let starMat = new THREE.PointsMaterial({color: 0xffffff, size: 1.5, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending});
             scene.add(new THREE.Points(starGeo, starMat));
 
-            // Regen
             const rain = createRainSystem();
             rain.position.set(0, 20, -100);
             scene.add(rain);
             rainParticles.push(rain);
 
-            // Dekorative Ringe
             for(let i=0; i<15; i++) {
                 let ring = new THREE.Mesh(
                     new THREE.TorusGeometry(35 + i * 2, 0.6, 16, 64), 
@@ -550,7 +570,6 @@
                 decoRings.push(ring);
             }
 
-            // Neonröhren am Boden
             for(let i = -2; i <= 2; i++) {
                 let neonGeo = new THREE.BoxGeometry(0.2, 0.05, 2000);
                 let neonMat = new THREE.MeshStandardMaterial({color: i === 0 ? 0x00f3ff : 0xff007f, emissive: i === 0 ? 0x00f3ff : 0xff007f, roughness: 0.2});
@@ -571,7 +590,7 @@
         }
 
         // =========================================================================
-        // 8. WELTGENERIERUNG & HINDERNISSE (VERBESSERT)
+        // 8. WELTGENERIERUNG & HINDERNISSE
         // =========================================================================
         const chunkLength = 20;
 
@@ -590,7 +609,6 @@
             floor.receiveShadow = true;
             chunk.add(floor);
 
-            // Gebäude mit Texturen
             let w = (Math.random()*25)+20; let d = (Math.random()*25)+20; let h = (Math.random()*150)+60;
             let b1 = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), Math.random() > 0.5 ? matBuilding1 : matBuilding2); 
             b1.castShadow = true; b1.receiveShadow = true;
@@ -659,7 +677,7 @@
         }
 
         // =========================================================================
-        // 9. EFFEKTE & FUNKEN (VERBESSERT)
+        // 9. EFFEKTE & FUNKEN
         // =========================================================================
         function spawnSparks(x, y, z) {
             const sparkColors = [0xffaa00, 0xff4400, 0xff0000, 0xffff00];
@@ -680,17 +698,15 @@
         }
 
         function updateEffects(dt) {
-            // Partikel aktualisieren
             for(let i=particles.length-1; i>=0; i--) {
                 let p = particles[i]; 
                 p.m.position.x += p.vx * dt; p.m.position.y += p.vy * dt; p.m.position.z += p.vz * dt;
-                p.vy += -20 * dt; // Schwerkraft
+                p.vy += -20 * dt;
                 p.m.scale.multiplyScalar(0.92); 
                 p.life -= dt * 2;
                 if(p.life <= 0) { scene.remove(p.m); particles.splice(i, 1); }
             }
             
-            // Regen
             rainParticles.forEach(rain => {
                 const positions = rain.geometry.attributes.position.array;
                 for (let i = 0; i < positions.length; i += 3) {
@@ -707,7 +723,6 @@
                 rain.position.z -= 50;
             });
             
-            // Dekorative Ringe
             decoRings.forEach(r => { 
                 r.position.z += currentSpeed * dt * 0.8; 
                 if(r.position.z > camera.position.z + 40) r.position.z = camera.position.z - 850; 
@@ -715,13 +730,11 @@
                 r.rotation.x += 0.2 * dt;
             });
             
-            // Neonlichter pulsieren
             const time = clock.getElapsedTime();
             neonLights.forEach((neon, i) => {
                 neon.material.emissiveIntensity = 0.5 + Math.sin(time * 3 + i) * 0.5;
             });
             
-            // Hindernis-Pfeile animieren
             obstacles.forEach(obs => { 
                 if(obs.arrow) obs.arrow.position.y = obs.aStart + Math.sin(time * 8) * 0.7;
             });
@@ -735,7 +748,6 @@
             throttleTargetRot = Math.PI / 4; 
             setTimeout(() => throttleTargetRot = 0, 600);
             
-            // Zusätzliche Partikel bei Boost
             for(let i = 0; i < 20; i++) {
                 spawnSparks(camera.position.x + (Math.random() - 0.5) * 3, camera.position.y + Math.random() * 2, camera.position.z - 3);
             }
@@ -847,6 +859,7 @@
 
         function gameOver() {
             isPlaying = false; isGameOver = true; 
+            isSlideKeyHeld = false;
             AudioSys.stopBGM(); AudioSys.crash();
             document.getElementById('damage-flash').style.opacity = '0.8';
             setTimeout(() => { document.getElementById('damage-flash').style.opacity = '0'; }, 200);
